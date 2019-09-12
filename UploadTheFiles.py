@@ -13,59 +13,73 @@ import warnings
 
 hsh={}
 fs={} # files
+uploading=[]
 ignored=[]
 curthread=0
 
+def newprint(s):
+    print("["+time.strftime('%Y.%m.%d-%H:%M:%S')+"] "+s)
+
 def sftp_mkdir(remote):
-    sf = paramiko.Transport((host,port))
-    sf.connect(username = username,password = password)
-    sftp = paramiko.SFTPClient.from_transport(sf)
+    
     pos=-1
     for i in range(0,len(remote)):
         if remote[i] == "/":
             pos=i
     remote=remote[0:pos]
-    print("Making directory "+remote+"...")
     try:
+        newprint("Making directory "+remote+"...")
+        sf = paramiko.Transport((host,port))
+        sf.connect(username = username,password = password)
+        sftp = paramiko.SFTPClient.from_transport(sf)
         sftp.stat(remote)
-        print('Directory exists!')
+        sf.close()
+        newprint('Directory exists!')
     except:
         try:
+            sf = paramiko.Transport((host,port))
+            sf.connect(username = username,password = password)
+            sftp = paramiko.SFTPClient.from_transport(sf)
             sftp.mkdir(remote)
-            print('Mkdir of "'+remote+'" has finished!')
+            sf.close()
+            newprint('Mkdir of "'+remote+'" has finished!')
         except Exception as e:
-            print("Mkdir exception: ",e)
-    sf.close()
+            print("["+time.strftime('%Y.%m.%d-%H:%M:%S')+"] Mkdir exception: ",e)
     
-def sftp_upload(local,remote):
+def sftp_upload(local,remote,hshtmp):
+    uploading.append(local)
     global curthread
     curthread=curthread+1
-    print('Uploading file "'+local+'" to "'+remote+'"')
-    sf = paramiko.Transport((host,port))
-    sf.connect(username = username,password = password)
-    sftp = paramiko.SFTPClient.from_transport(sf)
     try:
+        newprint('Uploading file "'+local+'" to "'+remote+'"')
+        sf = paramiko.Transport((host,port))
+        sf.connect(username = username,password = password)
+        sftp = paramiko.SFTPClient.from_transport(sf)
         sftp_mkdir(remote)
         sftp.put(local,remote)
-        print('Upload of file "'+local+'" has finished!')
+        sf.close()
+        hsh[local]=hshtmp
+        newprint('Upload of file "'+local+'" has finished!')
     except Exception as e:
-        print('Upload exception:',e)
-    sf.close()
+        hsh[local]="ERROR"
+        print("["+time.strftime('%Y.%m.%d-%H:%M:%S')+"] Upload exception: ",e)
     curthread=curthread-1
+    uploading.remove(local)
 
-def sftp_remove(remote):
+def sftp_remove(local,remote):
     global curthread
     curthread=curthread+1
-    print('Removing file "'+remote+'"')
-    sf = paramiko.Transport((host,port))
-    sf.connect(username = username,password = password)
-    sftp = paramiko.SFTPClient.from_transport(sf)
     try:
+        newprint('Removing file "'+remote+'"')
+        sf = paramiko.Transport((host,port))
+        sf.connect(username = username,password = password)
+        sftp = paramiko.SFTPClient.from_transport(sf)
         sftp.remove(remote)
-        print('Removal of file "'+local+'" has finished!')
+        sf.close()
+        hsh[local]=""
+        newprint('Removal of file "'+local+'" has finished!')
     except Exception as e:
-        print('Removal exception:',e)
-    sf.close()
+        print("["+time.strftime('%Y.%m.%d-%H:%M:%S')+"] Removal exception: ",e)
     curthread=curthread-1
 
 def upload(dir):
@@ -77,20 +91,20 @@ def upload(dir):
                 if not os.path.exists(path):
                     while curthread > maxthread:
                         time.sleep(0.1)
-                    sftp_remove(remote+path.replace(local,""))
+                    sftp_remove(path,remote+path.replace(local,""))
                     fs.remove(f)
     except:
         fs[dir]=[]
     for f in l:
         path=dir+"/"+f
         conti=0
-        if ignored.count(path) > 0:
+        if ignored.count(path) > 0 or uploading.count(path) > 0:
             continue
         for ig in ignore:
             if path.find(ig) != -1:
                 conti=1
                 ignored.append(path)
-                print("Ignoring "+path+".")
+                newprint("Ignoring "+path+".")
                 break
         if conti:
             continue
@@ -109,15 +123,14 @@ def upload(dir):
             except:
                 prehsh="NULL"
             if prehsh != hshtmp.hexdigest():
-                hsh[path]=hshtmp.hexdigest()
                 if prehsh == "NULL":
-                    print('\"'+path+'\" hasn\'t been uploaded before!')
-                    print('Hash of "'+path+'" is '+hsh[path])
+                    newprint('\"'+path+'\" hasn\'t been uploaded before!')
+                    newprint('Hash of "'+path+'" is '+hshtmp.hexdigest())
                 else:
-                    print('Detected changes in "'+path+'"!')
-                    print('Pre-Hash of "'+path+'" is "'+prehsh+'".')
-                    print('Cur-Hash of "'+path+'" is "'+hsh[path]+'".')
-                thread=threading.Thread(target=sftp_upload,args=(path,remote+path.replace(local,""),))
+                    newprint('Detected changes in "'+path+'"!')
+                    newprint('Pre-Hash of "'+path+'" is "'+prehsh+'".')
+                    newprint('Cur-Hash of "'+path+'" is "'+hshtmp.hexdigest()+'".')
+                thread=threading.Thread(target=sftp_upload,args=(path,remote+path.replace(local,""),hshtmp.hexdigest(),))
                 thread.start()
 
 if __name__ == '__main__':
@@ -130,41 +143,41 @@ if __name__ == '__main__':
     
     host=conf["host"]
     if host is None:
-        print("Invalid host!")
+        newprint("Invalid host!")
     port=conf["port"]
     if port is None:
-        print("Invalid port!")
+        newprint("Invalid port!")
     post=int(port)
     username=conf["username"]
     if username is None:
-        print("Invalid username!")
+        newprint("Invalid username!")
     password=conf["password"]
     if password is None:
-        print("Invalid password!")
+        newprint("Invalid password!")
     local=conf["local"]
     if local is None:
-        print("Invalid local directory!")
+        newprint("Invalid local directory!")
     local=local.replace("\\", "/")
     if local[len(local)-1]=='/':
         local=local[0:len(local)-1]
     remote=conf["remote"]
     if remote is None:
-        print("Invalid remote directory!")
+        newprint("Invalid remote directory!")
     remote=remote.replace("\\", "/")
     if remote[len(remote)-1]=='/':
         remote=remote[0:len(remote)-1]
     maxthread=conf["thread"]
     if maxthread is None:
-        print("Invalid thread!")
+        newprint("Invalid thread!")
     maxthread=int(maxthread)
     if maxthread < 1 or maxthread > 10:
-        print("Invalid number of max thread number!")
+        newprint("Invalid number of max thread number!")
         exit(0)
     ignore=conf["ignore"].replace("\\","/").split("|")
     for i in range(0,len(ignore)):
         if ignore[i][len(ignore[i])-1]=='/':
             ignore[i]=ignore[i][0:len(ignore)-1]
-    print("Auto Upload System started!")
+    newprint("Auto Upload System started!")
     sftp_mkdir(remote)
     while 1:
         upload(local)
