@@ -4,4 +4,4 @@
 <p>One more thing, you have to install paramiko with pip or the script can't run!</p>
 <hr>
 <h1>BackupRaspberryPi</h1>
-<p>Just run, and the script will do nearly every thing.</p>
+<p>No "dd", this script will automatically backup your RaspberryPi to a small image file(file name is your RaspberryPi's hostname)</p>
