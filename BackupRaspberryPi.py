@@ -151,14 +151,13 @@ if str(err) != "None":
     os.system("sudo rm backup.tar")
 
 print("\nFinishing...")
-p=subprocess.Popen("sudo blkid",shell=True,stdout=subprocess.PIPE)
-out,err=p.communicate()
-lines=str(out)
+lines=os.popen("sudo blkid")
 id="NULL"
 for line in lines:
     if line.find("/dev/mapper/loop"+loopid+"p1") != -1:
         pos=line.find("PARTUUID")
         id=line[pos+10:pos+10+8]
+print("PARTUUID="+id)
 targetstr="PARTUUID="
 f=open("tgt_boot/cmdline.txt","r")
 lines=f.readlines()
@@ -167,7 +166,7 @@ f=open("tgt_boot/cmdline.txt","w")
 for line in lines:
     pos=line.find("PARTUUID=")
     if pos != -1:
-        line.replace(line[pos+9:pos+9+8],id)
+        line=line.replace(line[pos+9:pos+9+8],id)
     f.write(line+"\n")
 f.close()
 f=open("tgt_root/etc/fstab","r")
@@ -177,7 +176,7 @@ f=open("tgt_root/etc/fstab","w")
 for line in lines:
     pos=line.find("PARTUUID=")
     if pos != -1:
-        line.replace(line[pos+9:pos+9+8],id)
+        line=line.replace(line[pos+9:pos+9+8],id)
     f.write(line+"\n")
 f.close()
 os.system("sudo umount src_boot/ src_root/ tgt_boot/ tgt_root/")
