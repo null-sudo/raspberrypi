@@ -1,0 +1,11 @@
+{
+    "host":"[remote machine host, eg 192.168.0.2]",
+    "port":[remote machine port, default 22],
+    "username":"[remote machine username, eg admin]",
+    "password":"[remote machine password, eg 123456]",
+    "local":"[local directory, eg D:\\local or D:/local or /path/to/local]",
+    "remote":"[remote directory, eg D:\\remote or D:/remote or /path/to/remote]",
+    "thread":[an integar from 1 to 10, default 3],
+    "loglevel":"[info,error or none, default info]",
+    "ignore":"[file or directory path, use | to separate, eg /path/to/1|/path/to/2]"
+}
