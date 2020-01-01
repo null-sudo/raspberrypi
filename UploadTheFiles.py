@@ -70,7 +70,7 @@ def sftp_upload(local,remote,hshtmp):
         log('Upload of file "'+local+'" has finished!')
     except Exception as e:
         hsh[local]="ERROR"
-        log("Upload exception: "+e)
+        log("Upload exception: "+str(e))
     curthread=curthread-1
     uploading.remove(local)
 
